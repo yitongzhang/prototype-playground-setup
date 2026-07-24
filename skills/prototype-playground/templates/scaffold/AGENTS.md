@@ -27,6 +27,8 @@ words to the right action:
 | "The button looks off everywhere" | Fix the component or token in `src/design-system/` — it propagates to every prototype. |
 | "Master doesn't match production" | The **only** reason to touch master: re-verify against `reference/` and correct it toward production. |
 | "Add a chat / assistant / agent panel" | New iteration using `src/agent/` (scripted transport) + shadcn chat components restyled to the design system. See "Prototyping agent chat". |
+| "Make the agent real / why isn't it connected?" | Swap in the zero-auth live transport with scripted fallback — one line, no credentials. See "Prototyping agent chat". |
+| "Show me the design system / the tokens / the fake data" | Already built in: `#/tools/design-system` and `#/tools/data` in the top nav. Extend those shell tool views if something is missing — never an iteration. |
 
 When in doubt: **new iteration**. Iterations are cheap and disposable; that
 is the whole point of this repo. Never burn an existing prototype to try a
@@ -64,10 +66,10 @@ new idea, and never edit master to try anything.
 
 | Path | Owns |
 | --- | --- |
-| `src/shell/` | Playground navigation (index page, chrome, registry). |
+| `src/shell/` | Playground navigation: the permanent top nav (`ShellHeader`), index page, prototype chrome, registry, and the built-in tool views (design-system catalog at `#/tools/design-system`, fixture viewer at `#/tools/data`). |
 | `src/design-system/` | Extracted tokens, typography, icons, illustrations, and core components. Single source of truth for all visual primitives. |
 | `src/data/` | Fake data: `types.ts` (domain types), `fixtures.ts` (the editable dataset), `index.ts` (store + hooks). |
-| `src/agent/` | Fake-agent runtime: event transport, scripted player (`scripts.ts` is the editable conversation fixture), optional GitHub Models live transport. |
+| `src/agent/` | Fake-agent runtime: event transport, scripted player (`scripts.ts` is the editable conversation fixture), zero-auth live transport (`ovh.ts`) and the fallback wrapper (`fallback.ts`). |
 | `src/prototypes/master/` | Pixel-perfect clone of production — the main screen and its one-click surfaces, with working navigation. **Sacred — see rule 1.** |
 | `src/prototypes/<slug>/` | One directory per iteration. |
 | `reference/` | Production screenshots the master was verified against. |
@@ -96,13 +98,23 @@ whole runtime — no agent framework, no SDK:
   streaming pacing, thinking pauses, and tool-call events. Edit that file
   like fixtures: one script per demo moment, replies grounded in the fake
   data. Deterministic, offline, and it works on the deployed static build.
-- **Optional: live model via GitHub Models** (free for any GitHub account).
-  The user creates a PAT with only the `models:read` permission and puts
-  `GITHUB_MODELS_TOKEN=…` in `.env.local`; the Vite dev proxy injects it
-  server-side. Swap in `createGitHubModelsTransport({ system })` — same
-  event interface, one-line change. Dev-only: deployed builds have no proxy
-  and must use the scripted agent. Never ask for or handle the token value
-  yourself; the user edits `.env.local` directly.
+- **Live mode: zero-auth via OVHcloud anonymous endpoints.** No account, no
+  API key, nothing for the user to create — and it works on deployed static
+  builds too. Always wrap it in the fallback so rate limits (about 2
+  requests/minute per IP) degrade to the scripted agent, and show which mode
+  answered:
+
+  ```ts
+  const transport = createFallbackTransport(
+    createOvhAnonymousTransport({ system }),
+    scriptedAgent,
+    { onFallback: () => setMode('scripted') },
+  )
+  ```
+
+  If the user wants a specific keyed provider instead, add it as another
+  transport behind the same interface; the user manages their own
+  credential — never ask for or handle the value yourself.
 - **Chat UI**: harvest shadcn's chat components
   (`npx shadcn@latest add message-scroller message bubble attachment marker`)
   and restyle them per rule 6. Don't rebuild scroll anchoring or streaming

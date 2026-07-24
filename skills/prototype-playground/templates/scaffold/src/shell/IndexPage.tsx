@@ -1,5 +1,6 @@
 import type { PrototypeEntry } from './registry'
 import { prototypes } from './registry'
+import { ShellHeader } from './ShellHeader'
 
 function Card({ entry }: { entry: PrototypeEntry }) {
   return (
@@ -42,20 +43,23 @@ function Section({ title, entries, empty }: { title: string; entries: PrototypeE
 
 export function IndexPage({ missingSlug }: { missingSlug?: string }) {
   return (
-    <div className="pg-index">
-      <header className="pg-index-header">
-        <h1>{{APP_NAME}} playground</h1>
-        <span className="pg-count">
-          {prototypes.length} prototype{prototypes.length === 1 ? '' : 's'}
-        </span>
-      </header>
-      {missingSlug && <p className="pg-warning">No prototype named “{missingSlug}”.</p>}
-      <Section title="Master" entries={prototypes.filter((p) => p.kind === 'master')} />
-      <Section
-        title="Iterations"
-        entries={prototypes.filter((p) => p.kind === 'iteration')}
-        empty="No iterations yet — copy src/prototypes/master/ to src/prototypes/<slug>/ and register it in src/shell/registry.ts."
-      />
+    <div className="pg-shell-page">
+      <ShellHeader active="prototypes" />
+      <main className="pg-index">
+        <header className="pg-index-header">
+          <h1>{{APP_NAME}} playground</h1>
+          <span className="pg-count">
+            {prototypes.length} prototype{prototypes.length === 1 ? '' : 's'}
+          </span>
+        </header>
+        {missingSlug && <p className="pg-warning">No prototype named “{missingSlug}”.</p>}
+        <Section title="Master" entries={prototypes.filter((p) => p.kind === 'master')} />
+        <Section
+          title="Iterations"
+          entries={prototypes.filter((p) => p.kind === 'iteration')}
+          empty="No iterations yet — copy src/prototypes/master/ to src/prototypes/<slug>/ and register it in src/shell/registry.ts."
+        />
+      </main>
     </div>
   )
 }

@@ -26,8 +26,10 @@ behind one Figma-files-style index.
    production reference screenshots, with working navigation between its
    surfaces, registered as the frozen source of truth.
 4. **Playground shell** — index page listing master + iterations
-   (Figma-file navigation), prototype chrome with prev/next switching, and a
-   playground `AGENTS.md` so future agents extend it correctly.
+   (Figma-file navigation), a permanent top nav on every route, prototype
+   chrome with prev/next switching, built-in tool views (`#/tools/design-system`
+   catalog and `#/tools/data` fixture viewer), and a playground `AGENTS.md`
+   so future agents extend it correctly.
 5. `npm install && npm run dev` is the entire setup. No secrets, no backend.
 
 ## Phase 0 — Inputs
@@ -87,8 +89,9 @@ honest "faithful reconstruction" downgrade, not a pixel-perfect claim.
    `{{APP_SLUG}}` (package name), `{{SOURCE_REPO}}` (path or URL),
    `{{TODAY}}` (YYYY-MM-DD).
 3. `git init`, install with the user's package manager (default `npm
-   install`), run `npm run dev`, and confirm the index page and the
-   placeholder master render. Commit the working scaffold.
+   install`), run `npm run dev`, and confirm the index page, the placeholder
+   master, and both tool views (`#/tools/design-system`, `#/tools/data`)
+   render. Commit the working scaffold.
 
 The stack is fixed: **Vite + React + TypeScript + Tailwind v4, static SPA,
 hash routing, no router/state libraries**. It is chosen for instant HMR (the
@@ -109,6 +112,12 @@ conflict on the main screen, fidelity wins. For behavior-heavy primitives
 restyle it to the product's exact spec — the scaffold is pre-wired for
 `npx shadcn add`; stock shadcn styling must never survive into a prototype.
 
+The shell's design-system catalog (`#/tools/design-system`) reads
+`tokens.css` automatically, so token sections populate themselves as
+extraction proceeds. As core components land, extend that page's
+"Components" section with a demo of each (variants + states) — it is the
+one place to see the whole system.
+
 ## Phase 5 — Build the fake data layer
 
 1. `src/data/types.ts` — TypeScript types for the surveyed core entities,
@@ -120,9 +129,12 @@ restyle it to the product's exact spec — the scaffold is pre-wired for
    (unread/done, statuses, edge lengths). Content should be shaped like the
    reference screenshot so layouts compare.
 3. `src/data/index.ts` — wrap fixtures in the provided `createStore`
-   (`src/data/store.ts`) and export typed hooks (`useTasks()`, `useUser()`…).
-   Prototypes read only through these hooks, so interactions (complete,
-   archive, reorder) work via `db.set` and the data stays swappable.
+   (`src/data/store.ts`), export the store as `db`, and export typed hooks
+   (`useTasks()`, `useUser()`…). Prototypes read only through these hooks,
+   so interactions (complete, archive, reorder) work via `db.set` and the
+   data stays swappable. The shell's fixture viewer (`#/tools/data`)
+   discovers the exported `db` automatically — check it renders the
+   collections once this module exists.
 
 ## Phase 6 — Master prototype, pixel-perfect
 
@@ -183,9 +195,12 @@ surface, follow
 [references/agent-prototyping.md](references/agent-prototyping.md). Summary:
 the scaffold's `src/agent/` module is the whole runtime — a scripted
 transport (default: deterministic, offline, deploys with the static build)
-and a GitHub Models live transport (free, dev-only via the Vite proxy) behind
-one event interface; no agent framework. Chat UI is harvested from shadcn's
-chat components and restyled to the extracted design system.
+and a zero-auth live transport (OVHcloud anonymous endpoints — no account,
+no API key, works on deployed builds; always wrapped in the scripted
+fallback) behind one event interface; no agent framework. Chat UI is
+harvested from shadcn's chat components and restyled to the extracted
+design system. The handoff report must say whether the agent surface is
+scripted or live.
 
 ## Robustness notes
 

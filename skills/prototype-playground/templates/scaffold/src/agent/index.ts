@@ -1,5 +1,6 @@
 export type { AgentEvent, AgentMessage, AgentTransport } from './transport'
 export { createScriptedTransport } from './scripted'
 export type { AgentScript, ScriptStep, ToolStep } from './scripted'
-export { createGitHubModelsTransport } from './github-models'
+export { createOvhAnonymousTransport } from './ovh'
+export { createFallbackTransport } from './fallback'
 export { scriptedAgent } from './scripts'

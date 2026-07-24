@@ -25,19 +25,33 @@ fixtures, and there is no server. The whole runtime is the ~150-line
   builds. During setup, replace the example scripts with 2–4 scripts in the
   product's domain, using fixture data in the replies so the agent and the
   UI tell one coherent story.
-- `github-models.ts` — the **live option**: GitHub Models, free for every
-  GitHub account, OpenAI-compatible, streaming. The user creates a PAT with
-  only the `models:read` permission, puts `GITHUB_MODELS_TOKEN=…` in
-  `.env.local`, and restarts `npm run dev`. The Vite proxy
-  (`vite.config.ts`) injects the token server-side — it never enters the
-  bundle, and deployed builds have no proxy, so published playgrounds
-  automatically fall back to scripted.
+- `ovh.ts` — the **live option**: OVHcloud AI Endpoints' anonymous tier.
+  Zero-auth by design — no account, no API key, no `.env` file, nothing for
+  the user to create. Calls go browser-direct to
+  `https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions`
+  (OpenAI-compatible, streaming, CORS `*`), so live mode works in dev **and
+  on deployed static builds**. Default model `gpt-oss-20b`; any model in
+  OVH's current catalog works.
+- `fallback.ts` — chains transports: try the live one, and if it errors
+  before producing output, replay the turn on the scripted agent. **Always
+  wrap the live transport in this**, and surface which mode answered (a
+  small "live / scripted" indicator near the composer) so a throttled demo
+  degrades honestly instead of dying or silently faking it.
 
-Live-mode constraints worth knowing: free tier is roughly 10–15
-requests/minute and 50–450/day depending on model class, with an **8K-token
-input cap** — inject a summary of the fixtures into the system prompt, not
-the whole dataset. Default model `openai/gpt-4.1-mini` is the right
-speed/quality for prototypes; any catalog model id works.
+Live-mode constraints worth knowing: the anonymous tier is limited to about
+**2 requests/minute per IP per model** — fine for a hands-on demo, useless
+for load — and it carries no SLA or longevity promise (OVH's docs say "as
+of now"; model ids rotate). That is exactly why the scripted transport stays
+the default and the fallback wrapper is mandatory. Keep prompts small:
+inject a summary of the fixtures into the system prompt, not the whole
+dataset.
+
+Why not GitHub Models or another keyed free tier: they require the user to
+create and manage a credential (a PAT), and not every user can get one.
+Zero-auth means the "make it real" request is a one-line transport swap with
+no user homework. If a user explicitly wants a specific keyed provider, wire
+it as another transport behind the same interface — the user handles their
+own credential; never create or store it for them.
 
 ## The chat UI: harvest shadcn, restyle to the product
 
@@ -73,9 +87,19 @@ reads as a template, not as the product.
    components.
 2. Hold conversation state in the iteration (or a `src/data/` hook if shared
    across iterations); append `AgentEvent`s into renderable message parts.
-3. Default to `scriptedAgent` from `src/agent`. Offer live mode only if the
-   user asks to "actually talk to it": have them create the PAT — do not
-   create or handle credentials for them — then swap
-   `createGitHubModelsTransport({ system })` in one line.
+3. Default to `scriptedAgent` from `src/agent`. When the user asks to
+   "actually talk to it", swap in live mode — no credentials involved:
+
+   ```ts
+   const transport = createFallbackTransport(
+     createOvhAnonymousTransport({ system }),
+     scriptedAgent,
+     { onFallback: (reason) => setMode('scripted') },
+   )
+   ```
+
 4. Give the scripted agent one script per demo moment the user cares about,
    and keep the fallback reply honest about being scripted.
+5. In the handoff report, say explicitly whether the agent surface is
+   scripted or live — users otherwise discover it by typing at it and
+   asking why it isn't connected.
